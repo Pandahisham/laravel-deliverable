@@ -2,20 +2,12 @@
 
 namespace Tshafer\Deliverable;
 
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Support\Facades\Auth;
+use Exception;
 
 trait DeliverableTrait
 {
-
-    /**
-     * Collection of deliveries
-     * @return mixed
-     */
-    public function deliveries()
-    {
-        return $this->morphMany('\Tshafer\Deliverable\Delivery', 'deliverable');
-    }
-
 
     /**
      * store delivery tasks
@@ -31,18 +23,18 @@ trait DeliverableTrait
         // get array of ids
         $recipientIds = DeliverableTrait::getMultipleUserIds($recipients);
         if ($recipientIds === null) {
-            throw new \Exception('Invalid recipient format');
+            throw new Exception('Invalid recipient format');
         }
 
         // prepare data for bulk insert
-        $deliveries = [];
+        $deliveries = [ ];
         foreach ($recipientIds as $userId) {
             $deliveries[] = [
-              'deliverable_id'   => $this->id,
-              'deliverable_type' => get_class($this),
-              'user_id'          => $userId,
-              'priority'         => $priority,
-              'created_at'       => date('Y-m-d H:i:s'),
+                'deliverable_id'   => $this->id,
+                'deliverable_type' => get_class($this),
+                'user_id'          => $userId,
+                'priority'         => $priority,
+                'created_at'       => date('Y-m-d H:i:s'),
             ];
         }
 
@@ -53,76 +45,32 @@ trait DeliverableTrait
 
 
     /**
-     * remove all delivery tasks for current item
+     * Return array of user ids
      *
-     * @param null $recipients
+     * @param $user
+     *
+     * @return array|null
      */
-    public function cancelDelivery($recipients = null)
-    {
-        // get array of ids
-        $recipientIds = DeliverableTrait::getMultipleUserIds($recipients);
-
-        // remove all delivery tasks
-        Delivery::where([
-          'deliverable_id'   => $this->id,
-          'deliverable_type' => get_class($this),
-        ])->whereIn('user_id', $recipientIds)->delete();
-    }
-
-
-    /**
-     * mark item as delivered or undelivered
-     *
-     * @param bool|true $delivered
-     * @param null      $user
-     *
-     * @throws \Exception
-     */
-    public function setDelivered($delivered = true, $user = null)
+    public static function getMultipleUserIds($user)
     {
 
-        // get user id
-        $userId = DeliverableTrait::getUserId($user);
-
-        if ($userId === null) {
-            throw new \Exception('Invalid user argument');
+        // is already array, return
+        if (is_array($user)) {
+            return $user;
         }
 
-        $deliveryData = [
-          'deliverable_id'   => $this->id,
-          'deliverable_type' => get_class($this),
-          'user_id'          => $userId,
-        ];
-
-        // set delivered date only if item is undelivered
-        if ($delivered) {
-            Delivery::where($deliveryData)->whereNull('delivered_at')->update(['delivered_at' => date('Y-m-d H:i:s')]);
-        } else {
-            Delivery::where($deliveryData)->update(['delivered_at' => null]);
-        }
-    }
-
-
-    /**
-     * check whether current item was delivered
-     *
-     * @param null $user
-     *
-     * @return bool
-     * @throws \Exception
-     */
-    public function isDelivered($user = null)
-    {
-        $userId = DeliverableTrait::getUserId($user);
-
-        if ($userId === null) {
-            throw new \Exception('Invalid user argument');
+        // get ids of user collection
+        if ($user instanceof Eloquent) {
+            return $user->lists('id')->all();
         }
 
-        return (bool) $this->deliveries()
-          ->where('user_id', '=', $user)
-          ->whereNotNull('delivered_at')
-          ->count();
+        // try to get one user id instead of array / collection
+        $singleUser = self::getUserId($user);
+        if ($singleUser != null) {
+            return [ $singleUser ];
+        }
+
+        return null;
     }
 
 
@@ -143,11 +91,11 @@ trait DeliverableTrait
 
         // return current user id, if no user provided
         if ($user === null) {
-            return \Auth::id();
+            return Auth::id();
         }
 
         // return id of user model
-        if ($user instanceof \Illuminate\Database\Eloquent\Model) {
+        if ($user instanceof Eloquent) {
             return $user->id;
         }
 
@@ -156,31 +104,82 @@ trait DeliverableTrait
 
 
     /**
-     * Return array of user ids
+     * remove all delivery tasks for current item
      *
-     * @param \App\User|Collection|array|int $user
-     *
-     * @return array|null
+     * @param null $recipients
      */
-    public static function getMultipleUserIds($user)
+    public function cancelDelivery($recipients = null)
+    {
+        // get array of ids
+        $recipientIds = DeliverableTrait::getMultipleUserIds($recipients);
+
+        // remove all delivery tasks
+        Delivery::where([
+            'deliverable_id'   => $this->id,
+            'deliverable_type' => get_class($this),
+        ])->whereIn('user_id', $recipientIds)->delete();
+    }
+
+
+    /**
+     * mark item as delivered or undelivered
+     *
+     * @param bool|true $delivered
+     * @param null      $user
+     *
+     * @throws \Exception
+     */
+    public function setDelivered($delivered = true, $user = null)
     {
 
-        // is already array, return
-        if (is_array($user)) {
-            return $user;
+        // get user id
+        $userId = DeliverableTrait::getUserId($user);
+
+        if ($userId === null) {
+            throw new Exception('Invalid user argument');
         }
 
-        // get ids of user collection
-        if ($user instanceof \Illuminate\Database\Eloquent\Collection) {
-            return $user->lists('id')->all();
+        $deliveryData = [
+            'deliverable_id'   => $this->id,
+            'deliverable_type' => get_class($this),
+            'user_id'          => $userId,
+        ];
+
+        // set delivered date only if item is undelivered
+        if ($delivered) {
+            Delivery::where($deliveryData)->whereNull('delivered_at')->update([ 'delivered_at' => date('Y-m-d H:i:s') ]);
+        } else {
+            Delivery::where($deliveryData)->update([ 'delivered_at' => null ]);
+        }
+    }
+
+
+    /**
+     * check whether current item was delivered
+     *
+     * @param null $user
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    public function isDelivered($user = null)
+    {
+        $userId = DeliverableTrait::getUserId($user);
+
+        if ($userId === null) {
+            throw new Exception('Invalid user argument');
         }
 
-        // try to get one user id instead of array / collection
-        $singleUser = \IronShark\Deliverable\DeliverableTrait::getUserId($user);
-        if ($singleUser != null) {
-            return [$singleUser];
-        }
+        return (bool) $this->deliveries()->where('user_id', '=', $user)->whereNotNull('delivered_at')->count();
+    }
 
-        return null;
+
+    /**
+     * Collection of deliveries
+     * @return mixed
+     */
+    public function deliveries()
+    {
+        return $this->morphMany(Delivery::class, 'deliverable');
     }
 }

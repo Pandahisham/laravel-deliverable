@@ -21,9 +21,10 @@ class CreateDeliveriesTable extends Migration
             $table->unsignedTinyInteger('priority')->index();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
-            $table->unique(['deliverable_id', 'deliverable_type', 'user_id'], 'deliverable_delivery_unique');
+            $table->unique([ 'deliverable_id', 'deliverable_type', 'user_id' ], 'deliverable_delivery_unique');
         });
     }
+
 
     /**
      * Reverse the migrations.

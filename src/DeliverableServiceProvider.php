@@ -2,26 +2,22 @@
 
 namespace Tshafer\Deliverable;
 
-use Illuminate\Support\ServiceProvider;
+use Tshafer\ServiceProvider\ServiceProvider as BaseProvider;
 
-class DeliverableServiceProvider extends ServiceProvider
+class DeliverableServiceProvider extends BaseProvider
 {
 
     protected $defer = true;
 
+
     public function boot()
     {
-        $this->publishes([
-          __DIR__ . '/../migrations/2015_07_20_122949_create_deliveries_table.php' => database_path('migrations/2015_07_20_122949_create_deliveries_table.php'),
-        ]);
+        $this->setup(__DIR__)->publishMigrations();
     }
 
-    public function register()
-    {
-    }
 
     public function when()
     {
-        return ['artisan.start'];
+        return [ 'artisan.start' ];
     }
 }
