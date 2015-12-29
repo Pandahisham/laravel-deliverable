@@ -2,15 +2,14 @@
 
 namespace Tshafer\Deliverable;
 
+use Exception;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Support\Facades\Auth;
-use Exception;
 
 trait DeliverableTrait
 {
-
     /**
-     * store delivery tasks
+     * store delivery tasks.
      *
      * @param null $recipients
      * @param int  $priority
@@ -21,13 +20,13 @@ trait DeliverableTrait
     {
 
         // get array of ids
-        $recipientIds = DeliverableTrait::getMultipleUserIds($recipients);
+        $recipientIds = self::getMultipleUserIds($recipients);
         if ($recipientIds === null) {
             throw new Exception('Invalid recipient format');
         }
 
         // prepare data for bulk insert
-        $deliveries = [ ];
+        $deliveries = [];
         foreach ($recipientIds as $userId) {
             $deliveries[] = [
                 'deliverable_id'   => $this->id,
@@ -43,9 +42,8 @@ trait DeliverableTrait
         Delivery::insert($deliveries);
     }
 
-
     /**
-     * Return array of user ids
+     * Return array of user ids.
      *
      * @param $user
      *
@@ -67,15 +65,14 @@ trait DeliverableTrait
         // try to get one user id instead of array / collection
         $singleUser = self::getUserId($user);
         if ($singleUser != null) {
-            return [ $singleUser ];
+            return [$singleUser];
         }
 
-        return null;
+        return;
     }
 
-
     /**
-     * returns user id from user model or current user
+     * returns user id from user model or current user.
      *
      * @param null $user
      *
@@ -85,7 +82,7 @@ trait DeliverableTrait
     {
 
         // is already integer id, return
-        if (is_integer($user)) {
+        if (is_int($user)) {
             return $user;
         }
 
@@ -99,19 +96,18 @@ trait DeliverableTrait
             return $user->id;
         }
 
-        return null;
+        return;
     }
 
-
     /**
-     * remove all delivery tasks for current item
+     * remove all delivery tasks for current item.
      *
      * @param null $recipients
      */
     public function cancelDelivery($recipients = null)
     {
         // get array of ids
-        $recipientIds = DeliverableTrait::getMultipleUserIds($recipients);
+        $recipientIds = self::getMultipleUserIds($recipients);
 
         // remove all delivery tasks
         Delivery::where([
@@ -120,9 +116,8 @@ trait DeliverableTrait
         ])->whereIn('user_id', $recipientIds)->delete();
     }
 
-
     /**
-     * mark item as delivered or undelivered
+     * mark item as delivered or undelivered.
      *
      * @param bool|true $delivered
      * @param null      $user
@@ -133,7 +128,7 @@ trait DeliverableTrait
     {
 
         // get user id
-        $userId = DeliverableTrait::getUserId($user);
+        $userId = self::getUserId($user);
 
         if ($userId === null) {
             throw new Exception('Invalid user argument');
@@ -147,24 +142,24 @@ trait DeliverableTrait
 
         // set delivered date only if item is undelivered
         if ($delivered) {
-            Delivery::where($deliveryData)->whereNull('delivered_at')->update([ 'delivered_at' => date('Y-m-d H:i:s') ]);
+            Delivery::where($deliveryData)->whereNull('delivered_at')->update(['delivered_at' => date('Y-m-d H:i:s')]);
         } else {
-            Delivery::where($deliveryData)->update([ 'delivered_at' => null ]);
+            Delivery::where($deliveryData)->update(['delivered_at' => null]);
         }
     }
 
-
     /**
-     * check whether current item was delivered
+     * check whether current item was delivered.
      *
      * @param null $user
      *
-     * @return bool
      * @throws \Exception
+     *
+     * @return bool
      */
     public function isDelivered($user = null)
     {
-        $userId = DeliverableTrait::getUserId($user);
+        $userId = self::getUserId($user);
 
         if ($userId === null) {
             throw new Exception('Invalid user argument');
@@ -173,9 +168,9 @@ trait DeliverableTrait
         return (bool) $this->deliveries()->where('user_id', '=', $user)->whereNotNull('delivered_at')->count();
     }
 
-
     /**
-     * Collection of deliveries
+     * Collection of deliveries.
+     *
      * @return mixed
      */
     public function deliveries()
