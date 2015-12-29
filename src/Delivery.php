@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 
 class Delivery extends Eloquent
 {
-
     /**
      * @var bool
      */
@@ -28,7 +27,6 @@ class Delivery extends Eloquent
         'created_at',
         'delivered_at',
     ];
-
 
     /**
      * @return mixed
